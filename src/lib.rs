@@ -46,6 +46,8 @@ mod tests {
     fn lagrange_univar_works() {
         let l_0 = LagrangeBasis::new(4, 0);
         let l_1= LagrangeBasis::new(4, 1);
+        let l_2 = LagrangeBasis::new(4, 2);
+        let l_3 = LagrangeBasis::new(4, 3);
         
         assert_eq!(l_0.evaluate(0), 1);
         assert_eq!(l_0.evaluate(1), 0);
@@ -56,5 +58,15 @@ mod tests {
         assert_eq!(l_1.evaluate(1), 1);
         assert_eq!(l_1.evaluate(2), 0);
         assert_eq!(l_1.evaluate(3), 0);
+
+        assert_eq!(l_2.evaluate(0), 0);
+        assert_eq!(l_2.evaluate(1), 0);
+        assert_eq!(l_2.evaluate(2), 1);
+        assert_eq!(l_2.evaluate(3), 0);
+
+        assert_eq!(l_3.evaluate(0), 0);
+        assert_eq!(l_3.evaluate(1), 0);
+        assert_eq!(l_3.evaluate(2), 0);
+        assert_eq!(l_3.evaluate(3), 1);
     }
 }
