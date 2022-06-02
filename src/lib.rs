@@ -69,4 +69,11 @@ mod tests {
         assert_eq!(l_3.evaluate(2), 0);
         assert_eq!(l_3.evaluate(3), 1);
     }
+
+    #[test]
+    #[should_panic]
+    fn lagrange_univar_panics_at_n() {
+        let l = LagrangeBasis::new(4, 0);
+        l.evaluate(4);
+    }
 }
