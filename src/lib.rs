@@ -40,13 +40,11 @@ pub mod lagrange {
                             accumulator *= ((x as f64) - (j as f64)) / ((i as f64) - (j as f64));
                         }
                     }
-                    accumulator as i64 
+                    accumulator as i64
                 },
             }
         }
     }
-
-
 
     impl<const N: usize> UnivarInterpolation<N> {
         pub fn new(a: [i64; N]) -> UnivarInterpolation<N> {
@@ -68,7 +66,7 @@ pub mod lagrange {
                 },
             }
         }
-        
+
         pub fn evaluate(&self, x: usize) -> i64 {
             (self.interpolation)(x, &self.a, &self.bases)
         }
@@ -103,7 +101,6 @@ mod tests {
         // assert_eq!(l.evaluate(1), 0);
         // assert_eq!(l.evaluate(2), 0);
         // assert_eq!(l.evaluate(3), 3);
-
     }
 
     #[test]
@@ -149,7 +146,7 @@ mod tests {
         assert_eq!(interpolation_b.evaluate(0), 2);
         assert_eq!(interpolation_b.evaluate(1), 1);
         assert_eq!(interpolation_b.evaluate(2), 0);
-        assert_eq!(interpolation_b.evaluate(3), 10);
+        assert_eq!(interpolation_b.evaluate(3), -1); // we should really make this a field element instead
     }
 
     #[test]
