@@ -1,18 +1,33 @@
+/**
+    `lagrange` module contains stuff //todo
+    TODOS:
+    - We could use FFT in the future instead of storing all the Basis during interpolation
+    - improve poly docs readme
+*/
+
 pub mod lagrange {
+    use ark_ff::Field;
+
+    // pub trait MultivariatePolynomial<F: PrimeField> {
+    //     fn new(coefficients: &[F]) -> Self;
+    //     fn basis_from_element(basis: F) -> Self;
+    // }
+
     /// Univariate Lagrange Basis polynomial
     #[derive(Debug)]
-    pub struct UnivarBasis {
+    pub struct UnivarBasis<F: Field> {
         n: usize,
         i: usize,
         // this function doesn't change (static function); move to `impl`, or make unique
-        basis: fn(x: usize, n: usize, i: usize) -> i64,
+        basis: fn(x: usize, n: usize, i: usize) -> F,
     }
 
     /// Express a vector `a` as the evaluations of a unique univariate polynomial degrees most n - 1 using `UnivarBasis`
-    pub struct UnivarInterpolation<const N: usize> {
+    /// TODO: You might get rid of `const N: usize` and just use a Vec; we did this to save at compile time.
+    pub struct UnivarInterpolation<const N: usize, F: Field> {
         a: [i64; N],
-        bases: [UnivarBasis; N],
-        interpolation: fn(x: usize, a: &[i64; N], bases: &[UnivarBasis; N]) -> i64,
+        bases: [UnivarBasis<F>; N],
+        interpolation: fn(x: usize, a: &[i64; N], bases: &[UnivarBasis<F>; N]) -> F,
     }
 
     pub struct MultivarBasis<const N: usize> {
@@ -20,6 +35,8 @@ pub mod lagrange {
         w: [i64; N],
         basis: fn(x: [i64; N], w: [i64; N]) -> i64,
     }
+
+    // pub struct MultilinearExtension<F: >
 
     impl UnivarBasis {
         pub fn evaluate(&self, point: usize) -> i64 {
