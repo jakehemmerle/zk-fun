@@ -16,10 +16,10 @@ pub mod lagrange {
         interpolation: fn(x: usize, a: &[F; N], bases: &[UnivarBasis<F>; N]) -> F,
     }
 
-    pub struct MultivarBasis<const N: usize> {
+    pub struct MultivarBasis<F: Field, const N: usize> {
         // many of the i64 vars and friends shuold be bools, since they represent some set {0, 1} ^ N
-        w: [i64; N],
-        basis: fn(x: [i64; N], w: [i64; N]) -> i64,
+        w: [F; N],
+        basis: fn(x: [F; N], w: [F; N]) -> F,
     }
 
     impl<F: Field> UnivarBasis<F> {
@@ -38,7 +38,8 @@ pub mod lagrange {
                         if j == (i as u64) {
                             continue;
                         } else {
-                            accumulator *= ((F::from(x as u64)) - (F::from(j))) / ((F::from(i as u64)) - (F::from(j)));
+                            accumulator *= ((F::from(x as u64)) - (F::from(j)))
+                                / ((F::from(i as u64)) - (F::from(j)));
                         }
                     }
                     accumulator
@@ -79,20 +80,20 @@ pub mod lagrange {
         }
     }
 
-    impl<const N: usize> MultivarBasis<N> {
-        pub fn new(w: [i64; N]) -> Self {
+    impl<F: Field, const N: usize> MultivarBasis<F, N> {
+        pub fn new(w: [F; N]) -> Self {
             MultivarBasis {
                 w,
-                basis: |x: [i64; N], w: [i64; N]| {
-                    let mut accumulator: i64 = 1;
+                basis: |x: [F; N], w: [F; N]| {
+                    let mut accumulator: F = F::one();
                     for (x_i, w_i) in x.iter().zip(w) {
-                        accumulator *= (w_i * x_i) + (1 - w_i) * (1 - x_i);
+                        accumulator *= (w_i * x_i) + (F::one() - w_i) * (F::one() - x_i);
                     }
                     accumulator
                 },
             }
         }
-        pub fn evaluate(&self, x: [i64; N]) -> i64 {
+        pub fn evaluate(&self, x: [F; N]) -> F {
             (self.basis)(x, self.w)
         }
     }
@@ -100,15 +101,21 @@ pub mod lagrange {
 
 #[cfg(test)]
 mod tests {
-    use ark_ff::{Fp64, MontBackend, MontConfig};
+    use ark_ff::{Fp64, MontBackend, MontConfig, One, Zero};
 
     use super::*;
 
     #[derive(MontConfig)]
     #[modulus = "11"]
     #[generator = "3"]
-    pub struct FqConfig;
-    pub type Fq11 = Fp64<MontBackend<FqConfig, 1>>;
+    pub struct FqConfig11;
+    pub type Fq11 = Fp64<MontBackend<FqConfig11, 1>>;
+
+    #[derive(MontConfig)]
+    #[modulus = "5"]
+    #[generator = "3"]
+    pub struct FqConfig5;
+    pub type Fq5 = Fp64<MontBackend<FqConfig5, 1>>;
 
     #[test]
     fn lagrange_univar_basis_works() {
@@ -162,11 +169,23 @@ mod tests {
 
     #[test]
     fn lagrange_multivar_works() {
-        let two_bit_lagrange = lagrange::MultivarBasis::new([0, 0]);
-        assert_eq!(two_bit_lagrange.evaluate([0, 0]), 1);
-        assert_eq!(two_bit_lagrange.evaluate([0, 1]), 0);
-        assert_eq!(two_bit_lagrange.evaluate([1, 0]), 0);
-        assert_eq!(two_bit_lagrange.evaluate([1, 1]), 0);
+        let two_bit_lagrange = lagrange::MultivarBasis::new([Fq5::zero(), Fq5::zero()]);
+        assert_eq!(
+            two_bit_lagrange.evaluate([Fq5::zero(), Fq5::zero()]),
+            Fq5::one()
+        );
+        assert_eq!(
+            two_bit_lagrange.evaluate([Fq5::zero(), Fq5::one()]),
+            Fq5::zero()
+        );
+        assert_eq!(
+            two_bit_lagrange.evaluate([Fq5::one(), Fq5::zero()]),
+            Fq5::zero()
+        );
+        assert_eq!(
+            two_bit_lagrange.evaluate([Fq5::one(), Fq5::one()]),
+            Fq5::zero()
+        );
     }
 
     #[test]
