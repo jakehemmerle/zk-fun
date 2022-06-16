@@ -1,18 +1,5 @@
-/**
-    `lagrange` module contains stuff //todo
-    TODOS:
-    - We could use FFT in the future instead of storing all the Basis during interpolation
-    - improve poly docs readme
-*/
-
 pub mod lagrange {
     use ark_ff::Field;
-
-    // pub trait MultivariatePolynomial<F: PrimeField> {
-    //     fn new(coefficients: &[F]) -> Self;
-    //     fn basis_from_element(basis: F) -> Self;
-    // }
-
     /// Univariate Lagrange Basis polynomial
     #[derive(Debug)]
     pub struct UnivarBasis<F: Field> {
@@ -23,11 +10,10 @@ pub mod lagrange {
     }
 
     /// Express a vector `a` as the evaluations of a unique univariate polynomial degrees most n - 1 using `UnivarBasis`
-    /// TODO: You might get rid of `const N: usize` and just use a Vec; we did this to save at compile time.
-    pub struct UnivarInterpolation<const N: usize, F: Field> {
-        a: [i64; N],
+    pub struct UnivarInterpolation<F: Field, const N: usize> {
+        a: [F; N],
         bases: [UnivarBasis<F>; N],
-        interpolation: fn(x: usize, a: &[i64; N], bases: &[UnivarBasis<F>; N]) -> F,
+        interpolation: fn(x: usize, a: &[F; N], bases: &[UnivarBasis<F>; N]) -> F,
     }
 
     pub struct MultivarBasis<const N: usize> {
@@ -36,10 +22,8 @@ pub mod lagrange {
         basis: fn(x: [i64; N], w: [i64; N]) -> i64,
     }
 
-    // pub struct MultilinearExtension<F: >
-
-    impl UnivarBasis {
-        pub fn evaluate(&self, point: usize) -> i64 {
+    impl<F: Field> UnivarBasis<F> {
+        pub fn evaluate(&self, point: usize) -> F {
             (self.basis)(point, self.n, self.i)
         }
 
@@ -47,7 +31,7 @@ pub mod lagrange {
             UnivarBasis {
                 n,
                 i,
-                basis: |x, n, i| -> i64 {
+                basis: |x, n, i| -> F {
                     let mut accumulator: f64 = 1.0;
                     for j in 0..(n as i64) {
                         //
@@ -57,19 +41,18 @@ pub mod lagrange {
                             accumulator *= ((x as f64) - (j as f64)) / ((i as f64) - (j as f64));
                         }
                     }
-                    accumulator as i64
+                    F::from(accumulator as u64)
                 },
             }
         }
     }
 
-    impl<const N: usize> UnivarInterpolation<N> {
-
+    impl<F: Field, const N: usize> UnivarInterpolation<F, N> {
         /// Construct a new `UnivarInterpolation` from a vector of coefficients that we're extending.
-        /// First, we compute the corresponding `UnivarBasis` for each coefficient, then store these (implicitly) via 
+        /// First, we compute the corresponding `UnivarBasis` for each coefficient, then store these (implicitly) via
         /// in `self.interpolation` closure.
-        pub fn new(a: [i64; N]) -> UnivarInterpolation<N> {
-            let bases: [UnivarBasis; N] = (0..N)
+        pub fn new(a: [F; N]) -> UnivarInterpolation<F, N> {
+            let bases: [UnivarBasis<F>; N] = (0..N)
                 .map(|i| UnivarBasis::new(N, i))
                 .collect::<Vec<_>>()
                 .try_into()
@@ -78,8 +61,8 @@ pub mod lagrange {
             UnivarInterpolation {
                 a,
                 bases,
-                interpolation: |x, a, delta| -> i64 {
-                    let mut accumulator: i64 = 0;
+                interpolation: |x, a, delta| -> F {
+                    let mut accumulator: F = F::zero();
                     for i in 0..N {
                         accumulator += delta[i].evaluate(x) * a[i];
                     }
@@ -91,7 +74,7 @@ pub mod lagrange {
         /// Given a point `x` (can be viewed as index), return the value of the interpolation at that point
         /// Within the size of `self.a`, the point `x` is mapped to the value of `self.a[x]`.
         /// If x > a.len(), then the value of the interpolation is the univariate extension encoding.
-        pub fn interpolate(&self, x: usize) -> i64 {
+        pub fn interpolate(&self, x: usize) -> F {
             (self.interpolation)(x, &self.a, &self.bases)
         }
     }
@@ -117,7 +100,16 @@ pub mod lagrange {
 
 #[cfg(test)]
 mod tests {
+    use ark_ff::{Fp64, MontBackend, MontConfig};
+
     use super::*;
+
+    #[derive(MontConfig)]
+    #[modulus = "17"]
+    #[generator = "3"]
+    pub struct FqConfig;
+    pub type Fq = Fp64<MontBackend<FqConfig, 1>>;
+
     #[test]
     fn lagrange_univar_basis_small() {
         // let l = lagrange::UnivarBasis::new(3, 0);
@@ -129,48 +121,48 @@ mod tests {
 
     #[test]
     fn lagrange_univar_basis_works() {
-        let l_0 = lagrange::UnivarBasis::new(4, 0);
-        let l_1 = lagrange::UnivarBasis::new(4, 1);
-        let l_2 = lagrange::UnivarBasis::new(4, 2);
-        let l_3 = lagrange::UnivarBasis::new(4, 3);
+        let l_0 = lagrange::UnivarBasis::<Fq>::new(4, 0);
+        let l_1 = lagrange::UnivarBasis::<Fq>::new(4, 1);
+        let l_2 = lagrange::UnivarBasis::<Fq>::new(4, 2);
+        let l_3 = lagrange::UnivarBasis::<Fq>::new(4, 3);
 
-        assert_eq!(l_0.evaluate(0), 1);
-        assert_eq!(l_0.evaluate(1), 0);
-        assert_eq!(l_0.evaluate(2), 0);
-        assert_eq!(l_0.evaluate(3), 0);
+        assert_eq!(l_0.evaluate(0), Fq::from(1));
+        assert_eq!(l_0.evaluate(1), Fq::from(0));
+        assert_eq!(l_0.evaluate(2), Fq::from(0));
+        assert_eq!(l_0.evaluate(3), Fq::from(0));
 
-        assert_eq!(l_1.evaluate(0), 0);
-        assert_eq!(l_1.evaluate(1), 1);
-        assert_eq!(l_1.evaluate(2), 0);
-        assert_eq!(l_1.evaluate(3), 0);
+        assert_eq!(l_1.evaluate(0), Fq::from(0));
+        assert_eq!(l_1.evaluate(1), Fq::from(1));
+        assert_eq!(l_1.evaluate(2), Fq::from(0));
+        assert_eq!(l_1.evaluate(3), Fq::from(0));
 
-        assert_eq!(l_2.evaluate(0), 0);
-        assert_eq!(l_2.evaluate(1), 0);
-        assert_eq!(l_2.evaluate(2), 1);
-        assert_eq!(l_2.evaluate(3), 0);
+        assert_eq!(l_2.evaluate(0), Fq::from(0));
+        assert_eq!(l_2.evaluate(1), Fq::from(0));
+        assert_eq!(l_2.evaluate(2), Fq::from(1));
+        assert_eq!(l_2.evaluate(3), Fq::from(0));
 
-        assert_eq!(l_3.evaluate(0), 0);
-        assert_eq!(l_3.evaluate(1), 0);
-        assert_eq!(l_3.evaluate(2), 0);
-        assert_eq!(l_3.evaluate(3), 1);
+        assert_eq!(l_3.evaluate(0), Fq::from(0));
+        assert_eq!(l_3.evaluate(1), Fq::from(0));
+        assert_eq!(l_3.evaluate(2), Fq::from(0));
+        assert_eq!(l_3.evaluate(3), Fq::from(1));
     }
 
     #[test]
     fn lagrange_univar_works() {
-        let a: [i64; 3] = [2, 1, 1];
-        let b: [i64; 3] = [2, 1, 0];
+        let a: [Fq; 3] = [Fq::from(2), Fq::from(1), Fq::from(1)];
+        // let b: [Fq; 3] = [2, 1, 0];
         let interpolation_a = lagrange::UnivarInterpolation::new(a);
-        let interpolation_b = lagrange::UnivarInterpolation::new(b);
+        // let interpolation_b = lagrange::UnivarInterpolation::new(b);
 
-        assert_eq!(interpolation_a.interpolate(0), 2);
-        assert_eq!(interpolation_a.interpolate(1), 1);
-        assert_eq!(interpolation_a.interpolate(2), 1);
-        assert_eq!(interpolation_a.interpolate(3), 2);
+        assert_eq!(interpolation_a.interpolate(0), Fq::from(2));
+        assert_eq!(interpolation_a.interpolate(1), Fq::from(1));
+        assert_eq!(interpolation_a.interpolate(2), Fq::from(1));
+        assert_eq!(interpolation_a.interpolate(3), Fq::from(2));
 
-        assert_eq!(interpolation_b.interpolate(0), 2);
-        assert_eq!(interpolation_b.interpolate(1), 1);
-        assert_eq!(interpolation_b.interpolate(2), 0);
-        assert_eq!(interpolation_b.interpolate(3), -1); // we should really make this a field element instead
+        // assert_eq!(interpolation_b.interpolate(0), 2);
+        // assert_eq!(interpolation_b.interpolate(1), 1);
+        // assert_eq!(interpolation_b.interpolate(2), 0);
+        // assert_eq!(interpolation_b.interpolate(3), -1); // we should really make this a field element instead
     }
 
     #[test]
