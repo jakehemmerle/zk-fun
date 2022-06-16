@@ -111,15 +111,6 @@ mod tests {
     pub type Fq = Fp64<MontBackend<FqConfig, 1>>;
 
     #[test]
-    fn lagrange_univar_basis_small() {
-        // let l = lagrange::UnivarBasis::new(3, 0);
-        // assert_eq!(l.evaluate(0), 1);
-        // assert_eq!(l.evaluate(1), 0);
-        // assert_eq!(l.evaluate(2), 0);
-        // assert_eq!(l.evaluate(3), 3);
-    }
-
-    #[test]
     fn lagrange_univar_basis_works() {
         let l_0 = lagrange::UnivarBasis::<Fq>::new(4, 0);
         let l_1 = lagrange::UnivarBasis::<Fq>::new(4, 1);
