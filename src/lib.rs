@@ -108,56 +108,56 @@ mod tests {
     #[modulus = "11"]
     #[generator = "3"]
     pub struct FqConfig;
-    pub type Fq = Fp64<MontBackend<FqConfig, 1>>;
+    pub type Fq11 = Fp64<MontBackend<FqConfig, 1>>;
 
     #[test]
     fn lagrange_univar_basis_works() {
-        let l_0 = lagrange::UnivarBasis::<Fq>::new(4, 0);
-        let l_1 = lagrange::UnivarBasis::<Fq>::new(4, 1);
-        let l_2 = lagrange::UnivarBasis::<Fq>::new(4, 2);
-        let l_3 = lagrange::UnivarBasis::<Fq>::new(4, 3);
+        let l_0 = lagrange::UnivarBasis::<Fq11>::new(4, 0);
+        let l_1 = lagrange::UnivarBasis::<Fq11>::new(4, 1);
+        let l_2 = lagrange::UnivarBasis::<Fq11>::new(4, 2);
+        let l_3 = lagrange::UnivarBasis::<Fq11>::new(4, 3);
 
-        assert_eq!(l_0.evaluate(0), Fq::from(1));
-        assert_eq!(l_0.evaluate(1), Fq::from(0));
-        assert_eq!(l_0.evaluate(2), Fq::from(0));
-        assert_eq!(l_0.evaluate(3), Fq::from(0));
+        assert_eq!(l_0.evaluate(0), Fq11::from(1));
+        assert_eq!(l_0.evaluate(1), Fq11::from(0));
+        assert_eq!(l_0.evaluate(2), Fq11::from(0));
+        assert_eq!(l_0.evaluate(3), Fq11::from(0));
 
-        assert_eq!(l_1.evaluate(0), Fq::from(0));
-        assert_eq!(l_1.evaluate(1), Fq::from(1));
-        assert_eq!(l_1.evaluate(2), Fq::from(0));
-        assert_eq!(l_1.evaluate(3), Fq::from(0));
+        assert_eq!(l_1.evaluate(0), Fq11::from(0));
+        assert_eq!(l_1.evaluate(1), Fq11::from(1));
+        assert_eq!(l_1.evaluate(2), Fq11::from(0));
+        assert_eq!(l_1.evaluate(3), Fq11::from(0));
 
-        assert_eq!(l_2.evaluate(0), Fq::from(0));
-        assert_eq!(l_2.evaluate(1), Fq::from(0));
-        assert_eq!(l_2.evaluate(2), Fq::from(1));
-        assert_eq!(l_2.evaluate(3), Fq::from(0));
+        assert_eq!(l_2.evaluate(0), Fq11::from(0));
+        assert_eq!(l_2.evaluate(1), Fq11::from(0));
+        assert_eq!(l_2.evaluate(2), Fq11::from(1));
+        assert_eq!(l_2.evaluate(3), Fq11::from(0));
 
-        assert_eq!(l_3.evaluate(0), Fq::from(0));
-        assert_eq!(l_3.evaluate(1), Fq::from(0));
-        assert_eq!(l_3.evaluate(2), Fq::from(0));
-        assert_eq!(l_3.evaluate(3), Fq::from(1));
+        assert_eq!(l_3.evaluate(0), Fq11::from(0));
+        assert_eq!(l_3.evaluate(1), Fq11::from(0));
+        assert_eq!(l_3.evaluate(2), Fq11::from(0));
+        assert_eq!(l_3.evaluate(3), Fq11::from(1));
     }
 
     #[test]
     fn lagrange_univar_works() {
-        let a: [Fq; 3] = [Fq::from(2), Fq::from(1), Fq::from(1)];
-        let b: [Fq; 3] = [Fq::from(2), Fq::from(1), Fq::from(0)];
+        let a: [Fq11; 3] = [Fq11::from(2), Fq11::from(1), Fq11::from(1)];
+        let b: [Fq11; 3] = [Fq11::from(2), Fq11::from(1), Fq11::from(0)];
         let interpolation_a = lagrange::UnivarInterpolation::new(a);
         let interpolation_b = lagrange::UnivarInterpolation::new(b);
 
-        assert_eq!(interpolation_a.interpolate(0), Fq::from(2));
-        assert_eq!(interpolation_a.interpolate(1), Fq::from(1));
-        assert_eq!(interpolation_a.interpolate(2), Fq::from(1));
-        assert_eq!(interpolation_a.interpolate(3), Fq::from(2));
-        assert_eq!(interpolation_a.interpolate(4), Fq::from(4));
-        assert_eq!(interpolation_a.interpolate(5), Fq::from(7));
+        assert_eq!(interpolation_a.interpolate(0), Fq11::from(2));
+        assert_eq!(interpolation_a.interpolate(1), Fq11::from(1));
+        assert_eq!(interpolation_a.interpolate(2), Fq11::from(1));
+        assert_eq!(interpolation_a.interpolate(3), Fq11::from(2));
+        assert_eq!(interpolation_a.interpolate(4), Fq11::from(4));
+        assert_eq!(interpolation_a.interpolate(5), Fq11::from(7));
 
-        assert_eq!(interpolation_b.interpolate(0), Fq::from(2));
-        assert_eq!(interpolation_b.interpolate(1), Fq::from(1));
-        assert_eq!(interpolation_b.interpolate(2), Fq::from(0));
-        assert_eq!(interpolation_b.interpolate(3), Fq::from(10));
-        assert_eq!(interpolation_b.interpolate(4), Fq::from(9));
-        assert_eq!(interpolation_b.interpolate(5), Fq::from(8));
+        assert_eq!(interpolation_b.interpolate(0), Fq11::from(2));
+        assert_eq!(interpolation_b.interpolate(1), Fq11::from(1));
+        assert_eq!(interpolation_b.interpolate(2), Fq11::from(0));
+        assert_eq!(interpolation_b.interpolate(3), Fq11::from(10));
+        assert_eq!(interpolation_b.interpolate(4), Fq11::from(9));
+        assert_eq!(interpolation_b.interpolate(5), Fq11::from(8));
     }
 
     #[test]
