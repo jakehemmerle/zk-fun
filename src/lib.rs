@@ -32,16 +32,16 @@ pub mod lagrange {
                 n,
                 i,
                 basis: |x, n, i| -> F {
-                    let mut accumulator: f64 = 1.0;
-                    for j in 0..(n as i64) {
+                    let mut accumulator: F = F::one();
+                    for j in 0..(n as u64) {
                         //
-                        if j == (i as i64) {
+                        if j == (i as u64) {
                             continue;
                         } else {
-                            accumulator *= ((x as f64) - (j as f64)) / ((i as f64) - (j as f64));
+                            accumulator *= ((F::from(x as u64)) - (F::from(j))) / ((F::from(i as u64)) - (F::from(j)));
                         }
                     }
-                    F::from(accumulator as u64)
+                    accumulator
                 },
             }
         }
