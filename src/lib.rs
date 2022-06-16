@@ -64,6 +64,10 @@ pub mod lagrange {
     }
 
     impl<const N: usize> UnivarInterpolation<N> {
+
+        /// Construct a new `UnivarInterpolation` from a vector of coefficients that we're extending.
+        /// First, we compute the corresponding `UnivarBasis` for each coefficient, then store these (implicitly) via 
+        /// in `self.interpolation` closure.
         pub fn new(a: [i64; N]) -> UnivarInterpolation<N> {
             let bases: [UnivarBasis; N] = (0..N)
                 .map(|i| UnivarBasis::new(N, i))
@@ -84,7 +88,10 @@ pub mod lagrange {
             }
         }
 
-        pub fn evaluate(&self, x: usize) -> i64 {
+        /// Given a point `x` (can be viewed as index), return the value of the interpolation at that point
+        /// Within the size of `self.a`, the point `x` is mapped to the value of `self.a[x]`.
+        /// If x > a.len(), then the value of the interpolation is the univariate extension encoding.
+        pub fn interpolate(&self, x: usize) -> i64 {
             (self.interpolation)(x, &self.a, &self.bases)
         }
     }
@@ -155,15 +162,15 @@ mod tests {
         let interpolation_a = lagrange::UnivarInterpolation::new(a);
         let interpolation_b = lagrange::UnivarInterpolation::new(b);
 
-        assert_eq!(interpolation_a.evaluate(0), 2);
-        assert_eq!(interpolation_a.evaluate(1), 1);
-        assert_eq!(interpolation_a.evaluate(2), 1);
-        assert_eq!(interpolation_a.evaluate(3), 2);
+        assert_eq!(interpolation_a.interpolate(0), 2);
+        assert_eq!(interpolation_a.interpolate(1), 1);
+        assert_eq!(interpolation_a.interpolate(2), 1);
+        assert_eq!(interpolation_a.interpolate(3), 2);
 
-        assert_eq!(interpolation_b.evaluate(0), 2);
-        assert_eq!(interpolation_b.evaluate(1), 1);
-        assert_eq!(interpolation_b.evaluate(2), 0);
-        assert_eq!(interpolation_b.evaluate(3), -1); // we should really make this a field element instead
+        assert_eq!(interpolation_b.interpolate(0), 2);
+        assert_eq!(interpolation_b.interpolate(1), 1);
+        assert_eq!(interpolation_b.interpolate(2), 0);
+        assert_eq!(interpolation_b.interpolate(3), -1); // we should really make this a field element instead
     }
 
     #[test]
