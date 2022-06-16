@@ -150,19 +150,23 @@ mod tests {
     #[test]
     fn lagrange_univar_works() {
         let a: [Fq; 3] = [Fq::from(2), Fq::from(1), Fq::from(1)];
-        // let b: [Fq; 3] = [2, 1, 0];
+        let b: [Fq; 3] = [Fq::from(2), Fq::from(1), Fq::from(0)];
         let interpolation_a = lagrange::UnivarInterpolation::new(a);
-        // let interpolation_b = lagrange::UnivarInterpolation::new(b);
+        let interpolation_b = lagrange::UnivarInterpolation::new(b);
 
         assert_eq!(interpolation_a.interpolate(0), Fq::from(2));
         assert_eq!(interpolation_a.interpolate(1), Fq::from(1));
         assert_eq!(interpolation_a.interpolate(2), Fq::from(1));
         assert_eq!(interpolation_a.interpolate(3), Fq::from(2));
+        assert_eq!(interpolation_a.interpolate(4), Fq::from(4));
+        assert_eq!(interpolation_a.interpolate(5), Fq::from(7));
 
-        // assert_eq!(interpolation_b.interpolate(0), 2);
-        // assert_eq!(interpolation_b.interpolate(1), 1);
-        // assert_eq!(interpolation_b.interpolate(2), 0);
-        // assert_eq!(interpolation_b.interpolate(3), -1); // we should really make this a field element instead
+        assert_eq!(interpolation_b.interpolate(0), Fq::from(2));
+        assert_eq!(interpolation_b.interpolate(1), Fq::from(1));
+        assert_eq!(interpolation_b.interpolate(2), Fq::from(0));
+        assert_eq!(interpolation_b.interpolate(3), Fq::from(10));
+        assert_eq!(interpolation_b.interpolate(4), Fq::from(9));
+        assert_eq!(interpolation_b.interpolate(5), Fq::from(8));
     }
 
     #[test]
