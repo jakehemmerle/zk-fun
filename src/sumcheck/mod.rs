@@ -27,7 +27,7 @@ impl<F: Field, const N: usize> Prover<F, N> {
         accumulator
     }
 
-    pub fn run_round(&mut self, r: F) -> () {
+    pub fn prove_round(&mut self, r: F) -> () {
         unimplemented!();
         // if self.round == 0 {
         //     self.run_first_round();
@@ -48,7 +48,7 @@ impl<F: Field, const N: usize> Verifier<F, N> {
         Verifier { g, round: 0 }
     }
 
-    fn run_round(&mut self, r: F) -> () {
+    fn verify_round(&mut self, r: F) -> () {
         self.round += 1;
     }
 }
@@ -91,8 +91,8 @@ mod test {
         assert_eq!(claim, Fq::from(12));
         let mut r = Fq::zero();
         for _ in 0..(v as usize) {
-            // let poly = prover.run_round(r);
-            // r = verifier.run_round(poly);
+            // let poly = prover.prove_round(r);
+            // r = verifier.verify_round(poly);
         }
     }
 }
