@@ -1,10 +1,45 @@
 pub mod multivariate {
     use ark_ff::Field;
+    use itertools::Itertools;
 
-    pub struct MultivarBasis<F: Field, const N: usize> {
+    #[derive(Debug, Clone)]
+    pub struct MultivarBasis<Fp: Field, const V: usize> {
         // many of the i64 vars and friends shuold be bools, since they represent some set {0, 1} ^ N
-        w: [F; N],
-        basis: fn(x: [F; N], w: [F; N]) -> F,
+        w: [Fp; V],
+        basis: fn(x: [Fp; V], w: [Fp; V]) -> Fp,
+    }
+
+    pub struct MulitvarInterpolation<Fp: Field, const V: usize> {
+        f: fn(w: [u8; V]) -> Fp,
+        bases: Vec<MultivarBasis<Fp, V>>,
+        interpolation:
+            fn(x: [Fp; V], f: fn([u8; V]) -> Fp, bases: &Vec<MultivarBasis<Fp, V>>) -> Fp,
+    }
+
+    impl<Fp: Field, const V: usize> MulitvarInterpolation<Fp, V> {
+        pub fn new(f: fn(x: [u8; V]) -> Fp) -> Self {
+            // iterate over the boolean hypercube {0,1}^V
+            let bases: Vec<MultivarBasis<Fp, V>> = (0..V)
+                .map(|_| 0..2u8)
+                .multi_cartesian_product()
+                .map(|w| MultivarBasis::from(w))
+                .collect();
+
+            MulitvarInterpolation {
+                f,
+                bases,
+                interpolation: |x: [Fp; V], f: fn([u8; V]) -> Fp, bases| -> Fp {
+                    let mut accumulator: Fp = Fp::zero();
+                    for (index, w) in (0..V).map(|_| 0..2u8).multi_cartesian_product().enumerate() {
+                        accumulator += bases[index].evaluate(x) * f(w.try_into().unwrap());
+                    }
+                    accumulator
+                },
+            }
+        }
+        pub fn interpolate(&self, x: [Fp; V]) -> Fp {
+            (self.interpolation)(x, self.f, &self.bases)
+        }
     }
 
     impl<F: Field, const N: usize> MultivarBasis<F, N> {
@@ -24,12 +59,24 @@ pub mod multivariate {
             (self.basis)(x, self.w)
         }
     }
+
+    impl<F: Field, const N: usize> From<Vec<u8>> for MultivarBasis<F, N> {
+        fn from(w: Vec<u8>) -> Self {
+            let x = w
+                .iter()
+                .map(|&x| F::from(x))
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap();
+            MultivarBasis::new(x)
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::multivariate::MultivarBasis;
-    use ark_ff::{Fp64, MontBackend, MontConfig, One, Zero};
+    use super::multivariate::{MulitvarInterpolation, MultivarBasis};
+    use ark_ff::{Fp128, Fp64, MontBackend, MontConfig, One, Zero};
 
     #[derive(MontConfig)]
     #[modulus = "5"]
@@ -60,20 +107,21 @@ mod tests {
 
     #[test]
     fn multilineal_extension() {
-        // let example_fn = |x: [i64; 2]| -> i64 {
-        //     match x {
-        //         [0, 0] => 1,
-        //         [0, 1] => 2,
-        //         [1, 0] => 1,
-        //         [1, 1] => 4,
-        //         _ => panic!("invalid input"),
-        //     }
-        // };
-        // let mut accumulator = 0;
-        // for all w in set_w {
-        //     let two_bit_lagrange = multivar::LagrangeBasis::new(w);
-        //     let term = two_bit_lagrange.evaluate(x) * example_fn(x)
-        //     accumulator += term;
-        // }
+        fn example_fn(x: [u8; 2]) -> Fq5 {
+            match x {
+                [0, 0] => Fq5::from(1),
+                [0, 1] => Fq5::from(2),
+                [1, 0] => Fq5::from(1),
+                [1, 1] => Fq5::from(4),
+                _ => panic!("invalid input"),
+            }
+        };
+        let interpolation = MulitvarInterpolation::<Fq5, 2>::new(example_fn);
+        assert_eq!(interpolation.interpolate([Fq5::zero(), Fq5::zero()]), Fq5::one());
+        assert_eq!(interpolation.interpolate([Fq5::zero(), Fq5::one()]), Fq5::from(2u8));
+        assert_eq!(interpolation.interpolate([Fq5::one(), Fq5::zero()]), Fq5::one());
+        assert_eq!(interpolation.interpolate([Fq5::one(), Fq5::one()]), Fq5::from(4u8));
+        assert_eq!(interpolation.interpolate([Fq5::from(3), Fq5::from(4)]), Fq5::from(4u8));
+        assert_eq!(interpolation.interpolate([Fq5::from(4), Fq5::from(4)]), Fq5::from(2u8));
     }
 }
