@@ -1,13 +1,27 @@
 use ark_ff::Field;
+use ark_poly::{
+    polynomial::multivariate::{
+        SparsePolynomial as SparseMVPolynomial, SparseTerm as SparseMVTerm,
+    },
+    univariate::SparsePolynomial as SparseUVPolynomial,
+    Polynomial,
+};
 use itertools::Itertools;
 
 pub struct Prover<F: Field, const N: usize> {
-    g: fn([F; N]) -> F,
+    g: SparseMVPolynomial<F, SparseMVTerm>,
     round: usize,
 }
 
+fn reduce_poly_to_univar_at_x<F: Field>(
+    x: usize,
+    poly: SparseMVPolynomial<F, SparseMVTerm>,
+) -> SparseUVPolynomial<F> {
+    unimplemented!()
+}
+
 impl<F: Field, const N: usize> Prover<F, N> {
-    pub fn init(g: fn([F; N]) -> F) -> Self {
+    pub fn init(g: SparseMVPolynomial<F, SparseMVTerm>) -> Self {
         Prover { g, round: 0 }
     }
 
@@ -21,7 +35,7 @@ impl<F: Field, const N: usize> Prover<F, N> {
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap();
-            accumulator += (self.g)(temp);
+            accumulator += self.g.evaluate(&temp.to_vec());
         }
 
         accumulator
@@ -39,12 +53,12 @@ impl<F: Field, const N: usize> Prover<F, N> {
 }
 
 pub struct Verifier<F: Field, const N: usize> {
-    g: fn([F; N]) -> F,
+    g: SparseMVPolynomial<F, SparseMVTerm>,
     round: usize,
 }
 
 impl<F: Field, const N: usize> Verifier<F, N> {
-    fn init(g: fn([F; N]) -> F) -> Self {
+    fn init(g: SparseMVPolynomial<F, SparseMVTerm>) -> Self {
         Verifier { g, round: 0 }
     }
 
@@ -54,14 +68,17 @@ impl<F: Field, const N: usize> Verifier<F, N> {
 }
 
 pub fn setup_protocol<F: Field, const N: usize>(
-    g: fn([F; N]) -> F,
+    g: SparseMVPolynomial<F, SparseMVTerm>,
 ) -> (Prover<F, N>, Verifier<F, N>) {
-    (Prover::init(g), Verifier::init(g))
+    (Prover::init(g.clone()), Verifier::init(g))
 }
 
 mod test {
+    use std::vec;
+
     use super::*;
     use ark_ff::{Fp64, MontBackend, MontConfig, One, Zero};
+    use ark_poly::{multivariate::Term, DenseMVPolynomial, Polynomial};
 
     #[derive(MontConfig)]
     #[modulus = "71"]
@@ -69,28 +86,40 @@ mod test {
     pub struct FqConfig;
     pub type Fq = Fp64<MontBackend<FqConfig, 1>>;
 
-    fn sample_g(x: [Fq; 3]) -> Fq {
-        Fq::from(2) * (x[0] * x[0] * x[0]) + x[0] * x[2] + x[1] * x[2]
+    // fn sample_g(x: [Fq; 3]) -> Fq {
+    //     Fq::from(2) * (x[0] * x[0] * x[0]) + x[0] * x[2] + x[1] * x[2]
+    // }
+
+    fn sample_poly() -> SparseMVPolynomial<Fq, SparseMVTerm> {
+        SparseMVPolynomial::from_coefficients_slice(
+            3,
+            &[
+                (Fq::from(2), SparseMVTerm::new(vec![(0, 3)])),
+                (Fq::from(1), SparseMVTerm::new(vec![(0, 1), (2, 1)])),
+                (Fq::from(1), SparseMVTerm::new(vec![(1, 1), (2, 1)])),
+            ],
+        )
     }
 
     #[test]
     fn test_g() {
-        let h: Fq = sample_g([Fq::zero(), Fq::zero(), Fq::zero()]);
+        let h: Fq = sample_poly().evaluate(&vec![Fq::zero(), Fq::zero(), Fq::zero()]);
         assert_eq!(h, Fq::zero());
-        let h: Fq = sample_g([Fq::one(), Fq::zero(), Fq::zero()]);
+        let h: Fq = sample_poly().evaluate(&vec![Fq::one(), Fq::zero(), Fq::zero()]);
         assert_eq!(h, Fq::from(2));
-        let h: Fq = sample_g([Fq::one(), Fq::zero(), Fq::one()]);
+        let h: Fq = sample_poly().evaluate(&vec![Fq::one(), Fq::zero(), Fq::one()]);
         assert_eq!(h, Fq::from(3));
     }
 
     #[test]
     fn test_protocol() {
-        let v = 3usize;
-        let (prover, verifier) = setup_protocol(sample_g);
+        const V: usize = 3usize;
+        let g = sample_poly();
+        let (prover, verifier) = setup_protocol::<Fq, V>(g);
         let claim = prover.get_claim();
         assert_eq!(claim, Fq::from(12));
         let mut r = Fq::zero();
-        for _ in 0..(v as usize) {
+        for _ in 0..V {
             // let poly = prover.prove_round(r);
             // r = verifier.verify_round(poly);
         }
