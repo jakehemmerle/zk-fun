@@ -11,18 +11,13 @@ use itertools::Itertools;
 pub struct Prover<F: Field, const N: usize> {
     g: SparseMVPolynomial<F, SparseMVTerm>,
     round: usize,
-}
-
-fn reduce_poly_to_univar_at_x<F: Field>(
-    x: usize,
-    poly: SparseMVPolynomial<F, SparseMVTerm>,
-) -> SparseUVPolynomial<F> {
-    unimplemented!()
+    // all the challenges `r_i` from the verifier
+    challenges: Vec<F>,
 }
 
 impl<F: Field, const N: usize> Prover<F, N> {
     pub fn init(g: SparseMVPolynomial<F, SparseMVTerm>) -> Self {
-        Prover { g, round: 0 }
+        Prover { g, round: 0, challenges: vec![] }
     }
 
     pub fn get_claim(&self) -> F {
@@ -49,6 +44,13 @@ impl<F: Field, const N: usize> Prover<F, N> {
         //     self.run_other_round();
         // }
         // self.round += 1;
+    }
+
+    /// Given a multivariate polynomial `self.g` over {x_1, ..., x_N}, evaluate it at all challenge points `0..self.round`,
+    /// variable at `index` will remain the X of the univariate polynomial, 
+    /// and the rest of the variables will be evaluated at a boolean hypercube of size {0,1}^(g.degree() - index).
+    fn reduce_poly_to_univar_at_x(x: usize) -> SparseUVPolynomial<F> {
+        unimplemented!()
     }
 }
 
@@ -85,10 +87,6 @@ mod test {
     #[generator = "3"]
     pub struct FqConfig;
     pub type Fq = Fp64<MontBackend<FqConfig, 1>>;
-
-    // fn sample_g(x: [Fq; 3]) -> Fq {
-    //     Fq::from(2) * (x[0] * x[0] * x[0]) + x[0] * x[2] + x[1] * x[2]
-    // }
 
     fn sample_poly() -> SparseMVPolynomial<Fq, SparseMVTerm> {
         SparseMVPolynomial::from_coefficients_slice(
