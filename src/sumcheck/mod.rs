@@ -4,6 +4,7 @@ use ark_poly::{
     DenseMVPolynomial, Polynomial,
 };
 use itertools::Itertools;
+mod util;
 
 pub struct Prover<F: Field, const N: usize> {
     g: SparseMVPolynomial<F, SparseTerm>,
@@ -47,68 +48,22 @@ impl<F: Field, const N: usize> Prover<F, N> {
         // self.round += 1;
     }
 }
-pub mod util {
-    use ark_poly::multivariate::Term;
-
-    use super::*;
-
-    /// Given a multivariate polynomial `g` over {x_1, ..., x_N}, evaluate it at all challenge points `0..x`,
-    /// variable at `x` will remain the X of the univariate polynomial,
-    /// and the rest of the variables will be evaluated at a boolean hypercube of size {0,1}^(g.degree() - index).
-    pub fn reduce_poly_to_univar_at_x<F: Field, const N: usize>(
-        g: SparseMVPolynomial<F, SparseTerm>,
-        x_i: usize,
-        challenges: Vec<F>,
-    ) -> SparseMVPolynomial<F, SparseTerm> {
-        // empty polynomial
-        let mut accumulator = SparseMVPolynomial::<F, SparseTerm>::from_coefficients_slice(
-            1,
-            &[(F::zero(), SparseTerm::new(vec![]))],
-        );
-        // iterate over the boolean hypercube {0,1}^(g.degree() - x_i)
-        for b in ((x_i + 1)..g.degree())
-            .map(|_| 0..2u64)
-            .multi_cartesian_product()
-        {
-            let mut partial_point: [Option<F>; N] = [None; N];
-
-            // fill out the partial point with challenges
-            for (index, element) in challenges.iter().enumerate() {
-                partial_point[index] = Some(*element);
-            }
-            for (index, bool_elem) in b.iter().enumerate() {
-                // fill out the partial point with the boolean hypercube
-                partial_point[index + x_i + 1] = Some(F::from(*bool_elem));
-            }
-            let eval: SparseMVPolynomial<F, SparseTerm> =
-                g.partial_evaluate(&partial_point.try_into().unwrap());
-            accumulator += &eval;
-        }
-        accumulator
-    }
-}
-
 pub struct Verifier<F: Field, const N: usize> {
     g: SparseMVPolynomial<F, SparseTerm>,
     round: usize,
+    challenges: Vec<F>,
 }
-
-// enum PartialEvaluationElement<F: Field> {
-//     FieldElement(F),
-//     FreeVariable,
-//     Domain(F, F)
-// }
-
-// trait ReduceMultivariatePolynomial<const N: usize> {
-//     fn reduce_multivariate_polynomial([PartialEvaluationElement; N]) -> univar or multivar
-// }
 
 impl<F: Field, const N: usize> Verifier<F, N> {
     fn init(g: SparseMVPolynomial<F, SparseTerm>) -> Self {
-        Verifier { g, round: 0 }
+        Verifier {
+            g,
+            round: 0,
+            challenges: vec![],
+        }
     }
 
-    fn verify_round(&mut self, r: F) -> () {
+    fn verify_round(&mut self, r: SparseMVPolynomial<F, SparseTerm>) -> () {
         self.round += 1;
     }
 }
@@ -119,12 +74,15 @@ pub fn setup_protocol<F: Field, const N: usize>(
     (Prover::init(g.clone()), Verifier::init(g))
 }
 
+#[allow(unused_imports, dead_code)]
 mod test {
     use std::vec;
 
-    use super::{util::reduce_poly_to_univar_at_x, *};
     use ark_ff::{Fp64, MontBackend, MontConfig, One, Zero};
     use ark_poly::{multivariate::Term, DenseMVPolynomial, Polynomial};
+
+    use super::*;
+    use crate::sumcheck::util::util::reduce_poly_to_univar_at_x;
 
     #[derive(MontConfig)]
     #[modulus = "71"]
