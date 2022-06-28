@@ -41,7 +41,7 @@ pub mod util {
         accumulator
     }
 
-    pub fn get_claim<F: Field, const N: usize> (g: SparseMVPolynomial<F, SparseTerm>) -> F {
+    pub fn get_claim<F: Field, const N: usize>(g: SparseMVPolynomial<F, SparseTerm>) -> F {
         let mut accumulator = F::zero();
         // iterate over the boolean hypercube {0,1}^N
         for b in (0..N).map(|_| 0..2u64).multi_cartesian_product() {
@@ -55,5 +55,9 @@ pub mod util {
         }
 
         accumulator
+    }
+
+    pub fn extend_x_to_array<F: Field, const N: usize>(x: u64) -> Vec<F> {
+        [F::from(x); N].to_vec()
     }
 }

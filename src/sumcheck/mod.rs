@@ -3,9 +3,10 @@ use ark_poly::{
     polynomial::multivariate::{SparsePolynomial as SparseMVPolynomial, SparseTerm},
     DenseMVPolynomial, Polynomial,
 };
-use ark_std::rand::{RngCore, Rng};
+use ark_std::rand::{Rng, RngCore};
 use itertools::Itertools;
 
+use self::util::util::extend_x_to_array;
 use self::util::util::reduce_poly_to_univar_at_x;
 mod util;
 
@@ -24,8 +25,6 @@ impl<F: Field, const N: usize> Prover<F, N> {
             challenges: vec![],
         }
     }
-
-
 
     pub fn prove_round(&mut self, r: Option<F>) -> SparseMVPolynomial<F, SparseTerm> {
         // partially evaluate new polynomials with g and the challenge for each round
@@ -48,49 +47,60 @@ impl<F: Field, const N: usize> Prover<F, N> {
         poly_i
     }
 }
-pub struct Verifier<F: Field, R: Rng, const N: usize> {
+pub struct Verifier<F: Field, const N: usize> {
     g: SparseMVPolynomial<F, SparseTerm>,
     round: usize,
-    challenges: Vec<F>, 
-    previous_poly: SparseMVPolynomial<F, SparseTerm>,
+    challenges: Vec<F>,
+    previous_poly: Option<SparseMVPolynomial<F, SparseTerm>>,
     claim: F,
-    rng: R,
 }
 
-impl<F: Field, R: Rng, const N: usize> Verifier<F, R, N> {
-    fn init(g: SparseMVPolynomial<F, SparseTerm>, initial_claim: F, rng: R) -> Self {
+impl<F: Field, const N: usize> Verifier<F, N> {
+    fn init(g: SparseMVPolynomial<F, SparseTerm>, initial_claim: F) -> Self {
         Verifier {
             g,
             round: 0,
             challenges: vec![],
             previous_poly: None,
             claim: initial_claim,
-            rng,
         }
     }
 
-    fn verify_round(&mut self, current_poly: SparseMVPolynomial<F, SparseTerm>, ) -> Option<F> {
-        let r: F = F::rand(&mut self.rng);
+    fn verify_round(
+        &mut self,
+        current_poly: SparseMVPolynomial<F, SparseTerm>,
+        rng: &mut dyn RngCore,
+    ) -> Option<F> {
+        let r: F = F::rand(rng);
+        // since our polynomials are univariate only in theory (in practice it's represented as a multivariate polynomial),
+        // to evaluate it at any variable X, we need to evaluate the whole polynomial at [X, X, ...]
+
         // if first round, don't use prev poly, just eval at 0 and 1, assert its equal to claim, then return our first challenge element
-        if round == 0 {
-            let claim = current_poly.evaluate(0) + current_poly.evaluate(1);
-            assert_eq!(claim, self.claim, "polynomials should be equal");
+        let computed =
+            current_poly.evaluate(&vec![F::zero(); N]) + current_poly.evaluate(&vec![F::one(); N]);
+
+        if self.round == 0 {
+            assert_eq!(computed, self.claim, "polynomials should be equal");
+        } else {
+            match &self.previous_poly {
+                Some(prev_poly) => {
+                    // otherwise,
+                    assert_eq!(
+                        computed,
+                        prev_poly.evaluate(&vec![r; N]),
+                        "polynomials should be equal"
+                    );
+                }
+                None => {
+                    panic!("previous poly should have been set by now");
+                }
+            }
         }
-        // otherwise, 
-        assert_eq!(current_poly.evaluate(0) + current_poly.evaluate(1), self.previous_poly.evaluate(r), "polynomials should be equal");
         self.round += 1;
+        self.previous_poly = Some(current_poly);
         Some(r)
     }
 }
-
-pub fn setup_protocol<F: Field, R: Rng, const N: usize>(
-    g: SparseMVPolynomial<F, SparseTerm>,
-    claim: F,
-    rng: R,
-) -> (Prover<F, N>, Verifier<F, R, N>) {
-    (Prover::init(g.clone()), Verifier::init(g, claim, rng))
-}
-
 #[allow(unused_imports, dead_code)]
 mod test {
     use std::vec;
@@ -99,7 +109,7 @@ mod test {
     use ark_poly::{multivariate::Term, DenseMVPolynomial, Polynomial};
 
     use super::*;
-    use crate::sumcheck::util::util::{reduce_poly_to_univar_at_x, get_claim};
+    use crate::sumcheck::util::util::{get_claim, reduce_poly_to_univar_at_x};
     use ark_ff::UniformRand;
     use ark_std::test_rng;
 
@@ -157,11 +167,12 @@ mod test {
         const V: usize = 3usize;
         let g = sample_poly();
         let rng = &mut test_rng();
-        let claim = get_claim::<Fq, V>(g);
-        let (mut prover, mut verifier) = setup_protocol::<Fq, RngCore, V>(g, claim, rng);
+        let claim = get_claim::<Fq, V>(g.clone());
+        let mut prover: Prover<Fq, V> = Prover::init(g.clone());
+        let mut verifier: Verifier<Fq, V> = Verifier::init(g, claim);
+
         assert_eq!(claim, Fq::from(12));
         let mut r: Option<Fq> = None;
-
 
         // the following two vectors are just for debugging purposes.
         // In reality, the verifier and prover both store all the challenges,
@@ -174,8 +185,37 @@ mod test {
         for _ in 0..V {
             poly_i = prover.prove_round(r);
             polynomials.push(poly_i.clone());
-            r = verifier.verify_round(poly_i);
+            r = verifier.verify_round(poly_i, rng);
             challenges.push(r);
         }
     }
 }
+
+/*
+
+g(x, y, z) = some poly
+
+round 1
+prover provides polynomial such that
+
+f1(x) = g(x, {0, 1}, {0, 1})        = g(x, 0, 0) + g(x, 1, 0) + g(x, 0, 1) + g(x, 1, 1)
+
+computed = f1(0) + f1(1);
+f1(0) = g(0, {0, 1}, {0, 1})
+f1(1) = g(1, {0, 1}, {0, 1})
+initial_claim =? f1(0) + f1(1)
+
+then round 2, prover gets r1. provides verifier with
+
+f2(0) = g(r1, 0, {0, 1})
+f2(1) = g(r1, 1, {0, 1})
+
+next round
+
+f3(0) = g(r1, r2, 0)
+f3(1) = g(r1, r2, 1)
+
+if f3(0) + f3(1) = g(r1, r2, r3)
+
+
+ */
