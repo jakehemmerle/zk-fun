@@ -3,10 +3,8 @@ use ark_poly::{
     polynomial::multivariate::{SparsePolynomial as SparseMVPolynomial, SparseTerm},
     DenseMVPolynomial, Polynomial,
 };
-use ark_std::rand::{Rng, RngCore};
-use itertools::Itertools;
+use ark_std::rand::RngCore;
 
-use self::util::util::extend_x_to_array;
 use self::util::util::reduce_poly_to_univar_at_x;
 mod util;
 
@@ -71,13 +69,22 @@ impl<F: Field, const N: usize> Verifier<F, N> {
         current_poly: SparseMVPolynomial<F, SparseTerm>,
         rng: &mut dyn RngCore,
     ) -> Option<F> {
-        let r: F = F::rand(rng);
         // since our polynomials are univariate only in theory (in practice it's represented as a multivariate polynomial),
         // to evaluate it at any variable X, we need to evaluate the whole polynomial at [X, X, ...]
 
         // if first round, don't use prev poly, just eval at 0 and 1, assert its equal to claim, then return our first challenge element
-        let computed =
-            current_poly.evaluate(&vec![F::zero(); N]) + current_poly.evaluate(&vec![F::one(); N]);
+        assert!(
+            current_poly.num_vars() == 1,
+            "polynomial should be univariate"
+        );
+        let computed0 = current_poly.evaluate(&vec![F::zero(); N]);
+        let computed1 = current_poly.evaluate(&vec![F::one(); N]);
+        println!("current poly: {:?}", current_poly);
+        println!("previous poly: {:?}", self.previous_poly);
+        println!("current poly(0) = {:?}", computed0);
+        println!("current_poly(1) = {:?}", computed1);
+
+        let computed = computed0 + computed1;
 
         if self.round == 0 {
             assert_eq!(computed, self.claim, "polynomials should be equal");
@@ -87,7 +94,7 @@ impl<F: Field, const N: usize> Verifier<F, N> {
                     // otherwise,
                     assert_eq!(
                         computed,
-                        prev_poly.evaluate(&vec![r; N]),
+                        prev_poly.evaluate(&vec![*self.challenges.last().unwrap(); N]),
                         "polynomials should be equal"
                     );
                 }
@@ -96,8 +103,14 @@ impl<F: Field, const N: usize> Verifier<F, N> {
                 }
             }
         }
+
+        let challenges = vec![F::from(2u8), F::from(3u8), F::from(6u8)];
+        // let r: F = F::rand(rng);
+        let r = challenges[self.round];
+        println!("r: {}", r);
         self.round += 1;
         self.previous_poly = Some(current_poly);
+        self.challenges.push(r);
         Some(r)
     }
 }
@@ -141,7 +154,7 @@ mod test {
     }
 
     #[test]
-    fn test_multivar_reduction() {
+    fn test_multivar_reduction_at_0() {
         let g = sample_poly();
         assert_eq!(g.degree(), 3, "degree of g is not 3");
 
@@ -160,6 +173,30 @@ mod test {
             );
 
         assert_eq!(reduced_polynomial, expected_poly);
+    }
+
+    #[test]
+    fn test_multivar_reduction_at_1() {
+        let g = sample_poly();
+        assert_eq!(g.degree(), 3, "degree of g is not 3");
+
+        // eg prover's polynomial in first round has no challenge elements
+        // whats the diff between Fq and Fp again?
+        let reduced_polynomial = reduce_poly_to_univar_at_x::<Fq, 3>(g, 1, vec![Fq::from(2u8)]);
+
+        let expected_poly: SparseMVPolynomial<Fq, SparseTerm> =
+            DenseMVPolynomial::from_coefficients_slice(
+                2,
+                &[
+                    (Fq::from(1), Term::new(vec![(1, 1)])),
+                    (Fq::from(34), Term::new(vec![])),
+                ],
+            );
+        let rand_point = vec![Fq::from(2u8); 3];
+        assert_eq!(
+            reduced_polynomial.evaluate(&rand_point),
+            expected_poly.evaluate(&rand_point)
+        );
     }
 
     #[test]

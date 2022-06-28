@@ -20,7 +20,7 @@ pub mod util {
             &[(F::zero(), SparseTerm::new(vec![]))],
         );
         // iterate over the boolean hypercube {0,1}^(g.degree() - x_i)
-        for b in ((x_i + 1)..g.degree())
+        for b in ((x_i + 1)..g.num_vars())
             .map(|_| 0..2u64)
             .multi_cartesian_product()
         {
@@ -55,9 +55,5 @@ pub mod util {
         }
 
         accumulator
-    }
-
-    pub fn extend_x_to_array<F: Field, const N: usize>(x: u64) -> Vec<F> {
-        [F::from(x); N].to_vec()
     }
 }
