@@ -54,7 +54,7 @@ pub struct Verifier<F: Field, const N: usize> {
 }
 
 impl<F: Field, const N: usize> Verifier<F, N> {
-    fn init(g: SparseMVPolynomial<F, SparseTerm>, initial_claim: F) -> Self {
+    pub fn init(g: SparseMVPolynomial<F, SparseTerm>, initial_claim: F) -> Self {
         Verifier {
             g,
             round: 0,
@@ -64,7 +64,7 @@ impl<F: Field, const N: usize> Verifier<F, N> {
         }
     }
 
-    fn verify_round(
+    pub fn verify_round(
         &mut self,
         current_poly: SparseMVPolynomial<F, SparseTerm>,
         rng: &mut dyn RngCore,
@@ -77,21 +77,20 @@ impl<F: Field, const N: usize> Verifier<F, N> {
             current_poly.num_vars() == 1,
             "polynomial should be univariate"
         );
-        let computed0 = current_poly.evaluate(&vec![F::zero(); N]);
-        let computed1 = current_poly.evaluate(&vec![F::one(); N]);
+        let computed_0 = current_poly.evaluate(&vec![F::zero(); N]);
+        let computed_1 = current_poly.evaluate(&vec![F::one(); N]);
         println!("current poly: {:?}", current_poly);
         println!("previous poly: {:?}", self.previous_poly);
-        println!("current poly(0) = {:?}", computed0);
-        println!("current_poly(1) = {:?}", computed1);
+        println!("current poly(0) = {:?}", computed_0);
+        println!("current_poly(1) = {:?}", computed_1);
 
-        let computed = computed0 + computed1;
+        let computed = computed_0 + computed_1;
 
         if self.round == 0 {
             assert_eq!(computed, self.claim, "polynomials should be equal");
         } else {
             match &self.previous_poly {
                 Some(prev_poly) => {
-                    // otherwise,
                     assert_eq!(
                         computed,
                         prev_poly.evaluate(&vec![*self.challenges.last().unwrap(); N]),
@@ -104,9 +103,7 @@ impl<F: Field, const N: usize> Verifier<F, N> {
             }
         }
 
-        let challenges = vec![F::from(2u8), F::from(3u8), F::from(6u8)];
-        // let r: F = F::rand(rng);
-        let r = challenges[self.round];
+        let r: F = F::rand(rng);
         println!("r: {}", r);
         self.round += 1;
         self.previous_poly = Some(current_poly);
