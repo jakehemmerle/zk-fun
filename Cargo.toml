@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ark-ff = { git = "https://github.com/arkworks-rs/algebra" }
+ark-ff = { git = "https://github.com/mmagician/algebra", branch = "partial_poly_eval" }
 ark-std = { git = "https://github.com/arkworks-rs/std" }
+ark-poly = { git = "https://github.com/mmagician/algebra", branch = "partial_poly_eval" }
 itertools = "0.10.3"
-ark-poly = { git = "https://github.com/arkworks-rs/algebra" }
