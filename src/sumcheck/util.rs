@@ -20,23 +20,38 @@ pub mod util {
             &[(F::zero(), SparseTerm::new(vec![]))],
         );
         // iterate over the boolean hypercube {0,1}^(g.degree() - x_i)
-        for b in ((x_i + 1)..g.num_vars())
+        let hypercube = ((x_i + 1)..g.num_vars())
             .map(|_| 0..2u64)
-            .multi_cartesian_product()
-        {
-            let mut partial_point: [Option<F>; N] = [None; N];
+            .multi_cartesian_product();
 
-            // fill out the partial point with challenges
-            for (index, element) in challenges.iter().enumerate() {
-                partial_point[index] = Some(*element);
-            }
+        println!("hypercube is {:?}", hypercube);
+
+        let mut partial_point: [Option<F>; N] = [None; N];
+
+        // fill out the partial point with challenges
+        for (index, element) in challenges.iter().enumerate() {
+            partial_point[index] = Some(*element);
+        }
+
+        // middle rounds
+        for b in hypercube {
+            println!("b value is {:?}", b);
+
             for (index, bool_elem) in b.iter().enumerate() {
                 // fill out the partial point with the boolean hypercube
                 partial_point[index + x_i + 1] = Some(F::from(*bool_elem));
             }
+            println!("partial point is {:?}", partial_point);
+
             let eval: SparseMVPolynomial<F, SparseTerm> =
                 g.partial_evaluate(&partial_point.try_into().unwrap());
             accumulator += &eval;
+        }
+
+        // final round
+        if x_i + 1 == g.num_vars() {
+            println!("partial point is {:?}", partial_point);
+            accumulator += &g.partial_evaluate(&partial_point.try_into().unwrap())
         }
         accumulator
     }

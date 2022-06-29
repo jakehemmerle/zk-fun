@@ -199,12 +199,14 @@ mod test {
         );
     }
 
+    // This test is a from the example Sum Check in "Proofs, Arguments, and Zero-Knowledge"
     #[test]
     fn test_protocol() {
         const V: usize = 3usize;
         let g = sample_poly();
         let rng = &mut test_rng();
         let claim = get_claim::<Fq, V>(g.clone());
+
         let mut prover: Prover<Fq, V> = Prover::init(g.clone());
         let mut verifier: Verifier<Fq, V> = Verifier::init(g, claim);
 
