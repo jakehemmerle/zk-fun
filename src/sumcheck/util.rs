@@ -19,41 +19,36 @@ pub mod util {
             1,
             &[(F::zero(), SparseTerm::new(vec![]))],
         );
-        // iterate over the boolean hypercube {0,1}^(g.degree() - x_i)
+
+        // can we make this more efficient with a Vec?
+        let mut partial_point: [Option<F>; N] = [None; N];
+
+        // generate hypercube {0,1}^(g.degree() - x_i)
         let hypercube = ((x_i + 1)..g.num_vars())
             .map(|_| 0..2u64)
             .multi_cartesian_product();
-
-        println!("hypercube is {:?}", hypercube);
-
-        let mut partial_point: [Option<F>; N] = [None; N];
 
         // fill out the partial point with challenges
         for (index, element) in challenges.iter().enumerate() {
             partial_point[index] = Some(*element);
         }
 
-        // middle rounds
-        for b in hypercube {
-            println!("b value is {:?}", b);
-
-            for (index, bool_elem) in b.iter().enumerate() {
-                // fill out the partial point with the boolean hypercube
-                partial_point[index + x_i + 1] = Some(F::from(*bool_elem));
-            }
-            println!("partial point is {:?}", partial_point);
-
-            let eval: SparseMVPolynomial<F, SparseTerm> =
-                g.partial_evaluate(&partial_point.try_into().unwrap());
-            accumulator += &eval;
-        }
-
-        // final round
-        // nothing in the boolean hypercube, but still need to evaluate at the challenge point
         if x_i + 1 == g.num_vars() {
+            // final round
             println!("partial point is {:?}", partial_point);
             accumulator += &g.partial_evaluate(&partial_point.try_into().unwrap())
+        } else {
+            // middle rounds
+            for b in hypercube {
+                for (index, bool_elem) in b.iter().enumerate() {
+                    // fill out the partial point with the boolean hypercube
+                    partial_point[index + x_i + 1] = Some(F::from(*bool_elem));
+                }
+
+                accumulator += &g.partial_evaluate(&partial_point.try_into().unwrap());
+            }
         }
+
         accumulator
     }
 
