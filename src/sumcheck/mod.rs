@@ -195,6 +195,31 @@ mod test {
             expected_poly.evaluate(&rand_point)
         );
     }
+    #[test]
+
+    fn test_multivar_reduction_at_2() {
+        let g = sample_poly();
+        assert_eq!(g.degree(), 3, "degree of g is not 3");
+
+        // eg prover's polynomial in first round has no challenge elements
+        // whats the diff between Fq and Fp again?
+        let reduced_polynomial =
+            reduce_poly_to_univar_at_x::<Fq, 3>(g, 2, vec![Fq::from(2u8), Fq::from(3u8)]);
+
+        let expected_poly: SparseMVPolynomial<Fq, SparseTerm> =
+            DenseMVPolynomial::from_coefficients_slice(
+                3,
+                &[
+                    (Fq::from(5), Term::new(vec![(2, 1)])),
+                    (Fq::from(16), Term::new(vec![])),
+                ],
+            );
+        let rand_point = vec![Fq::from(2u8); 3];
+        assert_eq!(
+            reduced_polynomial.evaluate(&rand_point),
+            expected_poly.evaluate(&rand_point)
+        );
+    }
 
     // This test is a from the example Sum Check in "Proofs, Arguments, and Zero-Knowledge"
     #[test]
