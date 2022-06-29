@@ -49,6 +49,7 @@ pub mod util {
         }
 
         // final round
+        // nothing in the boolean hypercube, but still need to evaluate at the challenge point
         if x_i + 1 == g.num_vars() {
             println!("partial point is {:?}", partial_point);
             accumulator += &g.partial_evaluate(&partial_point.try_into().unwrap())
