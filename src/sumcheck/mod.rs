@@ -64,6 +64,10 @@ impl<F: Field, const N: usize> Verifier<F, N> {
         }
     }
 
+    fn query_oracle(&mut self) -> F {
+        self.g.evaluate(&self.challenges)
+    }
+
     pub fn verify_round(
         &mut self,
         current_poly: SparseMVPolynomial<F, SparseTerm>,
@@ -104,10 +108,18 @@ impl<F: Field, const N: usize> Verifier<F, N> {
         }
 
         let r: F = F::rand(rng);
-        println!("r: {}", r);
+        self.challenges.push(r);
+
+        // final check that g(r_1, r_2, ..., r_n) = g_v(r_n)
+        if self.round == N - 1 {
+            assert_eq!(
+                current_poly.evaluate(&vec![*self.challenges.last().unwrap(); N]),
+                self.query_oracle(),
+                "Final round should be equal"
+            )
+        }
         self.round += 1;
         self.previous_poly = Some(current_poly);
-        self.challenges.push(r);
         Some(r)
     }
 }
