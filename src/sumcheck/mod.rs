@@ -83,10 +83,6 @@ impl<F: Field, const N: usize> Verifier<F, N> {
         );
         let computed_0 = current_poly.evaluate(&vec![F::zero(); N]);
         let computed_1 = current_poly.evaluate(&vec![F::one(); N]);
-        println!("current poly: {:?}", current_poly);
-        println!("previous poly: {:?}", self.previous_poly);
-        println!("current poly(0) = {:?}", computed_0);
-        println!("current_poly(1) = {:?}", computed_1);
 
         let computed = computed_0 + computed_1;
 
@@ -263,32 +259,3 @@ mod test {
         }
     }
 }
-
-/*
-
-g(x, y, z) = some poly
-
-round 1
-prover provides polynomial such that
-
-f1(x) = g(x, {0, 1}, {0, 1})        = g(x, 0, 0) + g(x, 1, 0) + g(x, 0, 1) + g(x, 1, 1)
-
-computed = f1(0) + f1(1);
-f1(0) = g(0, {0, 1}, {0, 1})
-f1(1) = g(1, {0, 1}, {0, 1})
-initial_claim =? f1(0) + f1(1)
-
-then round 2, prover gets r1. provides verifier with
-
-f2(0) = g(r1, 0, {0, 1})
-f2(1) = g(r1, 1, {0, 1})
-
-next round
-
-f3(0) = g(r1, r2, 0)
-f3(1) = g(r1, r2, 1)
-
-if f3(0) + f3(1) = g(r1, r2, r3)
-
-
- */
